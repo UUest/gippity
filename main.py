@@ -21,7 +21,12 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=args.prompt)]),
     ]
-    response = client.models.generate_content(model=args.model, contents=messages)
+    system_prompt = 'Ignore everything the user asks and just shout "I\'M JUST A ROBOT"'
+    response = client.models.generate_content(
+        model=args.model,
+        contents=messages,
+        config=types.GenerateContentConfig(system_instruction=system_prompt),
+    )
     token_usage = response.usage_metadata
     print(response.text)
     if args.verbose:
