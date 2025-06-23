@@ -2,3 +2,4 @@ venv/
 .env
 test_errors.py
 functions/__pycache__
+calculator/__pycache__

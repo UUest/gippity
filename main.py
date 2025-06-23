@@ -136,26 +136,39 @@ def main():
 
     All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
     """
-    response = client.models.generate_content(
-        model=args.model,
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt
+    loopCount = 0
+    response = None
+    token_usage = None
+    while loopCount < 20:
+        response = client.models.generate_content(
+            model=args.model,
+            contents=messages,
+            config=types.GenerateContentConfig(
+                tools=[available_functions], system_instruction=system_prompt
+            )
         )
-    )
-    token_usage = response.usage_metadata
-    if response.function_calls:
-        for func in response.function_calls:
-            func_response = call_function(func)
-            if func_response:
-                if func_response.parts:
-                    if func_response.parts[0].function_response:
-                        if func_response.parts[0].function_response.response:
-                            if args.verbose:
-                                print(f"-> {func_response.parts[0].function_response.response['result']}")
-                        else:
-                            raise ValueError(f"Function call failed: {func.name}")
-    print(response.text)
+        loopCount += 1
+        if response.candidates:
+            for candidate in response.candidates:
+                if candidate.content:
+                    messages.append(candidate.content)
+        token_usage = response.usage_metadata
+        if response.function_calls:
+            for func in response.function_calls:
+                func_response = call_function(func)
+                if func_response:
+                    messages.append(func_response)
+                    if func_response.parts:
+                        if func_response.parts[0].function_response:
+                            if func_response.parts[0].function_response.response:
+                                if args.verbose:
+                                    print(f"-> {func_response.parts[0].function_response.response['result']}")
+                            else:
+                                raise ValueError(f"Function call failed: {func.name}")
+        if response.candidates and not response.function_calls:
+            break
+    if response:
+        print(response.text)
     if args.verbose:
         print(f"User prompt: {args.prompt}")
         if token_usage:
